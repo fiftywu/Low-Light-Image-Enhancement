@@ -31,7 +31,9 @@ def make_dataset(data_path, max_dataset_size=float("inf"),
         for fname in fnames:
             if is_image_file(fname):
                 fname_split = fname.split("_") # llhdr_20210226141843_0ev_2944x2208_2944x2208
-                invariant_fname.append((tuple(fname_split[:2]), tuple(fname_split[3:])))
+                fname_pre_suffix = (tuple(fname_split[:2]), tuple(fname_split[3:]))
+                if fname_pre_suffix not in invariant_fname:
+                    invariant_fname.append(fname_pre_suffix)
         for item in invariant_fname:
             for query_idx in range(query_len):
                 image_path = os.path.join(
@@ -47,6 +49,8 @@ def make_dataset(data_path, max_dataset_size=float("inf"),
                 # -------------------
                 assert os.path.isfile(mask_path)
                 mask_paths[0].append(mask_path)
+            else:
+                mask_paths[0].append(None)
 
     max_len = min(max_dataset_size, len(image_paths[0]))
     assert len(mask_paths[0]) == len(image_paths[0])
@@ -59,6 +63,7 @@ def make_dataset(data_path, max_dataset_size=float("inf"),
 def extract_mask_from_json(mask_path):
     """
     inside is 255, outside is 0
+    # {'xmin': 406, 'ymin': 158, 'xmax': 528, 'ymax': 250}
     --------> (xmin, xmax)
     |
     v (ymin, ymax)
@@ -67,7 +72,6 @@ def extract_mask_from_json(mask_path):
         load_dict = json.load(load_f)
         width, height = load_dict['size']['width'], load_dict['size']['height']
         mask_dict = load_dict['outputs']['object'][0]['bndbox']
-    # {'xmin': 406, 'ymin': 158, 'xmax': 528, 'ymax': 250}
     min_x, min_y, max_x, max_y = \
         mask_dict['xmin'], mask_dict['ymin'], mask_dict['xmax'], mask_dict['ymax']
     mask = np.zeros([height, width]).astype('uint8')
@@ -81,10 +85,9 @@ if __name__ == '__main__':
     elif you want low-mid-mormal data
     """
     # data_path = "/mnt/19sdc/data/ARC_LLHDR_DUMP_LSI1/resize_0m2m3ev/train"
-    # data_path = "/mnt/19sdc/data/ARC_LLHDR_DUMP_QC1/resize_0m2m3ev/train"
     # image_paths, mask_paths = make_dataset(data_path, max_dataset_size=float("inf"),
     #                                     return_mask=False,
-    #                                     query_str=['-3ev', '-2ev', '0ev'])
+    #                                     query_str=['-3ev', '-2ev', '0ev', 'mask'])
 
     data_path = "/mnt/19sdc/data/DB_1015_1103_1118/resize_lownormal/train"
     image_paths, mask_paths = make_dataset(data_path, max_dataset_size=float("inf"),
